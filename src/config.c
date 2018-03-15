@@ -177,6 +177,8 @@ void loadServerConfigFromString(char *config) {
 
     lines = sdssplitlen(config,strlen(config),"\n",1,&totlines);
 
+    bool dispersistence = false;
+
     for (i = 0; i < totlines; i++) {
         sds *argv;
         int argc;
@@ -446,6 +448,10 @@ void loadServerConfigFromString(char *config) {
                 err = "argument must be 'yes' or 'no'"; goto loaderr;
             }
             server.aof_state = yes ? AOF_ON : AOF_OFF;
+	} else if (!strcasecmp(argv[0],"disable-persistence") && argc == 2) {
+	    if ((yesnotoi(argv[1])) == 1) {
+		dispersistence = true;
+	    }
         } else if (!strcasecmp(argv[0],"appendfilename") && argc == 2) {
             if (!pathIsBaseName(argv[1])) {
                 err = "appendfilename can't be a path, just a filename";
@@ -735,6 +741,13 @@ void loadServerConfigFromString(char *config) {
         }
         sdsfreesplitres(argv,argc);
     }
+
+    /* Disabling AOF and RDB */
+    if (dispersistence) {
+	    server.aof_state = AOF_OFF;
+	    resetServerSaveParams();
+    }
+
 
     /* Sanity checks. */
     if (server.cluster_enabled && server.masterhost) {
